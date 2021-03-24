@@ -10,7 +10,7 @@ cfg.seed=hex2dec('623F9A9E');
 
 VOLUME='brain';
 
-cfg.nphoton=1e7;
+cfg.nphoton=1e8;
 
 if strcmp(VOLUME, 'brain')
     load colin27_v3.mat
@@ -26,17 +26,16 @@ if strcmp(VOLUME, 'brain')
     cfg.detpos=[75 18 92 5];
     
 elseif strcmp(VOLUME, 'cube')
-    dim=180;
+    dim=60;
     [xi,yi,zi]=meshgrid(1:dim,1:dim,1:dim);
     dist=(xi-30).^2+(yi-30).^2+(zi-30).^2;
     cfg.vol=ones(size(xi));
-    %cfg.vol(dist<100)=2;
+    cfg.vol(dist<100)=2;
     cfg.vol=uint8(cfg.vol);
     cfg.srcpos=[30,30,0]+1;
-    cfg.detpos=[30,30,0]+1;
     cfg.prop=[0 0 1 1          % medium 0: the environment
-       0.002 1.0 0.01 1.37];     % medium 1: cube
-       %0.050 0.5 0.01 1.37];   % medium 2: spherical inclusion
+       0.002 1.0 0.01 1.37     % medium 1: cube
+       0.050 0.5 0.01 1.37];   % medium 2: spherical inclusion
 end
 
 % define the source position
@@ -61,13 +60,13 @@ cfg.gpuid=1;
 
 %% running simulation with boundary reflection enabled
 fprintf('running simulation ...\n');
-%cfg.isreflect=1; % enable reflection at exterior boundary
-%cfg.isrefint=1;  % enable reflection at interior boundary too
-%cfg.issavedet=1; % enable recording partial pathlength of detected photons
-%cfg.ismomentum=1;
-%cfg.issaveref=1;
-%cfg.issaveexit=1;
-%cfg.replaydet=1;
+cfg.isreflect=1; % enable reflection at exterior boundary
+cfg.isrefint=1;  % enable reflection at interior boundary too
+cfg.issavedet=1; % enable recording partial pathlength of detected photons
+cfg.ismomentum=1
+cfg.issaveref=1
+cfg.issaveexit=1;
+cfg.replaydet=1
 
 tic;
 %[f2,det2]=mcxlab(cfg);
