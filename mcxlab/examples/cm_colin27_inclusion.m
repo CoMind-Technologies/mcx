@@ -8,7 +8,7 @@ try % Allows for use of MXCLABCL is on a non-NVIDIA machine.
 catch
     USE_MCXCL=1;
 end
-%% Define simulation parameters
+%% Define default simulation parameters
 % set seed to make the simulation repeatible
 cfg.seed=hex2dec('623F9A9E'); 
 % Volume model being used.
@@ -68,8 +68,9 @@ cfg.gpuid=1;%
 fprintf('running simulation ...\n');
 tic;
 %[f2,det2]=mcxlabcl(cfg);
-[fluence,detphoton,vol,seed,trajectory] = mcxlabcl(cfg);
+[fluence,detphoton,vol,seed,trajectory] = mcxlab(cfg);
 toc;
+
 
 % Everything above here runs fine. The next section throws the "Invalid
 % Buffer" error
