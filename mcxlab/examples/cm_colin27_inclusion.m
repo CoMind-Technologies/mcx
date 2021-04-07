@@ -3,7 +3,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 clear cfg;
-
+try % Allows for use of MXCLABCL is on a non-NVIDIA machine.
+    gpuinfo=mcxlab('gpuinfo');
+catch
+    USE_MCXCL=1;
+end
 %% Define simulation parameters
 % set seed to make the simulation repeatible
 cfg.seed=hex2dec('623F9A9E'); 
