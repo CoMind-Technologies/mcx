@@ -8,13 +8,56 @@
 clear all;
 clear cfg;
 try % Allows for use of MXCLABCL is on a non-NVIDIA machine.
-    gpuinfo=mcxlab('gpuinfo');
+    gpuinfo=mcx
+lab('gpuinfo');
 catch
     USE_MCXCL=1;
 end
 %% Upload a default volume
 load colin27_v3.mat
 cfg.vol=colin27; % The default volume is 
+%% The above is telling us that  all 'skull' tissue is in voxels labelled '2', so they can be identified...
+dims = size(cfg.vol);
+scalp.idx = find(cfg.vol==1);
+[scalp.x,scalp.y,scalp.z] = ind2sub(dims,scalp.idx);
+skull.idx = find(cfg.vol==2);
+[skull.x,skull.y,skull.z] = ind2sub(dims,skull.idx);
+csf.idx = find(cfg.vol==3);
+[csf.x,csf.y,csf.z] = ind2sub(dims,csf.idx);
+
+% Pick a point in the tissue type you like. This can be done by pulling a 'row' of coords
+% Done here for cerebral spinal fluid, making 100 inclusions:
+s = RandStream('mlfg6331_64');
+% Randomly pick a set of volume indices
+vox_volume=500;
+csf.inclusions=[];
+i=0;
+while (length(csf.inclusions)<100) && i<10000
+    idx = randi(s,length(csf.idx));
+    proposal = make_inclusion([csf.x(idx),csf.y(idx),csf.z(idx)],vox_volume,cfg.vol);
+    if length(proposal.indices)==vox_volume
+        csf.inclusions =[csf.inclusions, proposal];
+        fprintf("Inclusion added. Total: %d \n",length(csf.inclusions));
+    end
+   i=i+1; 
+end
+% This is essentially all we need; an inclusion needs to add its optical properties  to the
+% "cfg.prop" object, but we need not make a whole new VOLUME object for
+% each inclusion.
+%% Save generated inclusion files
+csf_inclusions = csf.inclusions
+save(sprintf('./inclusions/csf_%dvol.mat',vox_volume),'csf_inclusions');
+clear csf_inclusions;
+%% To visualise, we require some bare-minima
+cfg.srcpos=[75 14 73]; %Source position
+cfg.srcdir=[0.0 1.0 0.0, 5.0];% define the source DIRECTION
+% time-domain simulation parameters
+cfg.tstart=0;% Start
+cfg.tend=5e-9;% Stop
+cfg.tstep=cfg.tend;% timestep can be same as duration for no photons.
+% Above are all essential. Next is just a choice.
+cfg.issrcfrom0 = 0; % Defines the location of the origin: 0 or 1 (0 here).
+cfg.nphoton=0; % Number of photons can be zero for generating.
 % Each line below defines the optical parameters for that tissue type:
 % mua (absorption) mus (scattering) g (anisotropy) and 'n'
 cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
@@ -23,129 +66,58 @@ cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
         0.0040    0.0090    0.8900    1.3700 %(3) csf
         0.0200    9.0000    0.8900    1.3700 %(4) gray matters
         0.0800   40.9000    0.8400    1.3700 %(5) white matters
-             0         0    1.0000    1.0000]; %(6) air pockets
-% %         
-cfg.srcpos=[75 14 73]; %Source position
-cfg.srcdir=[0.0 1.0 0.0, 5.0];% define the source DIRECTION
-% time-domain simulation parameters
-cfg.tstart=0;% Start
-cfg.tend=5e-9;% Stop
-cfg.tstep=2e-10;% timestep
-% Above are all essential. Next is just a choice.
-cfg.issrcfrom0 = 0; % Defines the location of the origin: 0 or 1 (0 here).
-cfg.nphoton=0; % Number of photons
-%% Visualise it:
-mcxpreview(cfg)
-%% Now "process" it through mcx:
-[fluence,detphoton,vol] = mcxlab(cfg);
-%% And visualise output...
-out=cfg;
-out.vol=vol.data;
-mcxpreview(out);
-% Above should work, and look the same!
-%% Now include an inclusion
-incl_origin = [75 25 92];
-incl_radius = 2;
-cfg.shapes = [sprintf('{"Shapes":[{"Sphere": {"Tag":7, "O":[%d,%d,%d],"R":%d}}]}',[incl_origin,incl_radius])];
-cfg.prop = [cfg.prop(1:7,:); 0.0800   40.9000    0.8400    1.3700]; %(7) inclusion
-%yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))) % Define the planes for imagine later
-%xy_plane = int8(0.5*(cfg.srcpos(3)+cfg.detpos(3)))
-% And visualise:
+             0         0    1.0000    1.0000 %(6) air pockets
+          0.11         1.   0.6       1.37]; %(7) inclusions (blood?)
+%%  Try find the larget ones?
+maxes= [0 0 0 0];
+idx = [0 0 0 0];
+for i=1:length(csf.inclusions)
+    max_z = max(csf.inclusions(i).voxels(:,3));
+    if maxes(end)<max_z
+        maxes(1:3)=maxes(2:4);
+        idx(1:3)=idx(2:4);
+        maxes(end) = max_z;
+        idx(end)=i;
+    end
+end
+%% First Row
+figure(1)
+hold on
+cfg.vol(csf.inclusions(idx(3)).indices)=7;
+title(sprintf('Inclusion near (%d,%d,%d)',csf.inclusions(idx(3)).voxels(1,:)));
+hold on;
 mcxpreview(cfg);
-%% Now "process" it through mcx:
-[fluence,detphoton,vol] = mcxlab(cfg);
-%% And visualise output...
-out.vol=vol.data;
-mcxpreview(out);
-% Now what's weird here is ONLY thr inclusion remains?!
-%% Now include a detector
-cfg.detpos=[75 18 92 5]; %Detector Position
-yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))); % Define the planes for plotting
-xy_plane = int16(0.5*(cfg.srcpos(3)+cfg.detpos(3)));
-
-% cfg.isreflect=0; % enable reflection at exterior boundary
-% cfg.isrefint=1;  % enable reflection at interior boundary too
-
-%% Define OUTPUT settings 
-cfg.issavedet=0; % Record partial pathlength of detected photons
-cfg.ismomentum=0; % Save photon momentums
-cfg.issaveref=1; % Save diffuse reflectance at air voxels.
-cfg.issaveexit=1; % Save photon exit postitions & directions.
-cfg.replaydet=-1; % Replay photons from all detectors.
-cfg.issaveseed=1; % save the initial seed
-cfg.maxdetphoton=1e6; % Maximum number of photons to detect.
-
-%% GPU thread configuration
-cfg.autopilot=1;% Let MCX decide how many threads are important
-cfg.gpuid=1;% 
-
-%% Run Simulation
-fprintf('running simulation ...\n');
-tic;
-%[f2,det2]=mcxlabcl(cfg);
-[fluence,detphoton,vol,seed,trajectory] = mcxlab(cfg);
-toc;
-
-
-% Everything above here runs fine. The next section throws the "Invalid
-% Buffer" error
-
-%% Replay detected photons
-
-% newcfg=cfg;
-% newcfg.seed=seed.data;
-% newcfg.outputtype='jacobian';
-% newcfg.detphotons=detphoton.data;
-% newcfg.replaydet=1;
-% [flux2, detp2, vol2, seeds2, traj2]=mcxlabcl(newcfg);
-% jac=sum(flux2.data,4); 
-
-
-%% plot the results
-figure
- % Plot from LOADED volume data 
-% horiz = single(squeeze(colin27(:, :, xy_plane)))';
-% saggital = single(squeeze(colin27(yz_plane, :, :)))';
-    % Plot from OUTPUT volume data
-horiz = single(squeeze(vol.data(:, :, xy_plane)))';
-saggital = single(squeeze(vol.data(yz_plane, :, :)))';
-    % Plot from INPUT volume data
-% horiz = single(squeeze(cfg.vol(:, :, xy_plane)))';
-% saggital = single(squeeze(cfg.vol(yz_plane, :, :)))';
-
-subplot(121); % plot x,y plane
-set(gca,'YDir','normal') 
-% contourf(log10(squeeze(sum(fluence.data(:,:,xy_plane,:),4))'), 12, 'LineStyle','none');
-% colorbar;
-title('total photon flux (horizontal plane)');
+mcxplotvol(cfg.vol);
+%% Second Row
+cfg.vol=colin27;
+cfg.vol(csf.inclusions(idx(4)).indices)=7;
+figure(2)
+hold on
+title(sprintf('Inclusion near (%d,%d,%d)',csf.inclusions(idx(4)).voxels(1,:)));
 hold on;
-imcontour(horiz, 'k');
-hold on;
-% if inclusion
-%     horiz_inclusion = single(vol.data(:, :, incl_origin(3)))';
-%     imcontour(horiz_inclusion, 'm');
-%     hold on;
-% end
-% Plot the source & detector
-plot(cfg.detpos(1), cfg.detpos(2), 'ko')
-hold on;
-plot(cfg.srcpos(1), cfg.srcpos(2), 'ro')
-
-subplot(122); % plot y,z plane
-set(gca,'YDir','normal') 
-% contourf(log10(squeeze(sum(fluence.data(yz_plane,:,:,:),4))'), 12, 'LineStyle','none');
-% colorbar;
-title('total photon flux (saggital plane)');
-hold on;
-imcontour(saggital, 'k');
-hold on;
-% if inclusion
-%     saggital_inclusion = single(squeeze(vol.data(incl_origin(1), :, :)))';
-%     imcontour(saggital_inclusion, 'm');
-%     hold on;
-% end
-
-% Plot source and detector
-plot(cfg.detpos(2), cfg.detpos(3), 'ko')
-hold on;
-plot(cfg.srcpos(2), cfg.srcpos(3), 'ro')
+mcxpreview(cfg);
+mcxplotvol(cfg.vol);
+%% FUNCTION DEFINITIONS:
+function inclusion = make_inclusion(pi,n_voxels,volume)
+% This function starts at a point, a voxel, and performs a random walk
+% through the volume, starting at 
+% recording all voxels visited that satisfy 2 conditions:
+% pi is the initial point (a vector of 2 usigned integers)
+dims = size(volume);
+inclusion.voxels =[pi];
+loc=pi;
+tissue_type = volume(pi(1),pi(2),pi(3));
+s=0;
+while (length(inclusion.voxels)<n_voxels) && (s<100*n_voxels) % only try for 100 times the volume size.
+    proposals = inclusion.voxels+randi(2,3,1)'-1; % Propose a new voxel neighbour to EVERY member.
+    new_rows = ~ismember(proposals,inclusion.voxels,'rows'); % see who's a member 
+    proposals=proposals(new_rows,:); % Ditch anything that is alread in the set.
+    in_tissue=(volume(sub2ind(dims,proposals(:,1),proposals(:,2),proposals(:,3)))==tissue_type);
+    inclusion.voxels=[inclusion.voxels; proposals(in_tissue,:)];
+    s=s+1;
+end
+if length(inclusion.voxels)>n_voxels
+    inclusion.voxels=inclusion.voxels(1:n_voxels,:);
+end
+inclusion.indices = sub2ind(size(volume),inclusion.voxels(:,1),inclusion.voxels(:,2),inclusion.voxels(:,3));
+end
