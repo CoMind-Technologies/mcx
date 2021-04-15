@@ -8,13 +8,13 @@
 clear all;
 clear cfg;
 try % Allows for use of MXCLABCL is on a non-NVIDIA machine.
-    gpuinfo=mcx
-lab('gpuinfo');
+    gpuinfo=mcxlab('gpuinfo');
 catch
     USE_MCXCL=1;
 end
 %% Upload a default volume
 load colin27_v3.mat
+volume_name='colin27';
 cfg.vol=colin27; % The default volume is 
 %% The above is telling us that  all 'skull' tissue is in voxels labelled '2', so they can be identified...
 dims = size(cfg.vol);
@@ -24,9 +24,10 @@ skull.idx = find(cfg.vol==2);
 [skull.x,skull.y,skull.z] = ind2sub(dims,skull.idx);
 csf.idx = find(cfg.vol==3);
 [csf.x,csf.y,csf.z] = ind2sub(dims,csf.idx);
+greyMatter.idx = find(cfg.vol==4);
+[greyMatter.x,greyMatter.y,greyMatter.z] = ind2sub(dims,greyMatter.idx);
 
-% Pick a point in the tissue type you like. This can be done by pulling a 'row' of coords
-% Done here for cerebral spinal fluid, making 100 inclusions:
+%% Making Cerebral Spinal Fluid (csf) inclusions:
 s = RandStream('mlfg6331_64');
 % Randomly pick a set of volume indices
 vox_volume=500;
@@ -45,9 +46,29 @@ end
 % "cfg.prop" object, but we need not make a whole new VOLUME object for
 % each inclusion.
 %% Save generated inclusion files
-csf_inclusions = csf.inclusions
-save(sprintf('./inclusions/csf_%dvol.mat',vox_volume),'csf_inclusions');
-clear csf_inclusions;
+inclusions = csf.inclusions;
+save(sprintf('./inclusions/%s_csf_%dvol.mat',volume_name,vox_volume),'inclusions');
+clear inclusions;
+%% Making Grey Matter inclusions:
+s = RandStream('mlfg6331_64');
+% Randomly pick a set of volume indices
+vox_volume=500;
+greyMatter.inclusions=[];
+i=0;
+while (length(greyMatter.inclusions)<100) && i<10000
+    idx = randi(s,length(greyMatter.idx));
+    proposal = make_inclusion([greyMatter.x(idx),greyMatter.y(idx),greyMatter.z(idx)],vox_volume,cfg.vol);
+    if length(proposal.indices)==vox_volume
+        greyMatter.inclusions =[greyMatter.inclusions, proposal];
+        fprintf("Inclusion added. Total: %d \n",length(greyMatter.inclusions));
+    end
+   i=i+1; 
+end
+% This is Done for now.
+%% Save generated inclusion files
+inclusions = greyMatter.inclusions;
+save(sprintf('./inclusions/%s_greyMatter_%dvol.mat',volume_name,vox_volume),'inclusions');
+clear inclusions;
 %% To visualise, we require some bare-minima
 cfg.srcpos=[75 14 73]; %Source position
 cfg.srcdir=[0.0 1.0 0.0, 5.0];% define the source DIRECTION
@@ -71,8 +92,8 @@ cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
 %%  Try find the larget ones?
 maxes= [0 0 0 0];
 idx = [0 0 0 0];
-for i=1:length(csf.inclusions)
-    max_z = max(csf.inclusions(i).voxels(:,3));
+for i=1:length(greyMatter.inclusions)
+    max_z = max(greyMatter.inclusions(i).voxels(:,3));
     if maxes(end)<max_z
         maxes(1:3)=maxes(2:4);
         idx(1:3)=idx(2:4);
@@ -83,26 +104,27 @@ end
 %% First Row
 figure(1)
 hold on
-cfg.vol(csf.inclusions(idx(3)).indices)=7;
-title(sprintf('Inclusion near (%d,%d,%d)',csf.inclusions(idx(3)).voxels(1,:)));
+cfg.vol(greyMatter.inclusions(idx(3)).indices)=7;
+title(sprintf('Inclusion near (%d,%d,%d)',greyMatter.inclusions(idx(3)).voxels(1,:)));
 hold on;
 mcxpreview(cfg);
 mcxplotvol(cfg.vol);
 %% Second Row
 cfg.vol=colin27;
-cfg.vol(csf.inclusions(idx(4)).indices)=7;
+cfg.vol(greyMatter.inclusions(idx(4)).indices)=7;
 figure(2)
 hold on
-title(sprintf('Inclusion near (%d,%d,%d)',csf.inclusions(idx(4)).voxels(1,:)));
+title(sprintf('Inclusion near (%d,%d,%d)',greyMatter.inclusions(idx(4)).voxels(1,:)));
 hold on;
 mcxpreview(cfg);
 mcxplotvol(cfg.vol);
 %% FUNCTION DEFINITIONS:
 function inclusion = make_inclusion(pi,n_voxels,volume)
-% This function starts at a point, a voxel, and performs a random walk
-% through the volume, starting at 
-% recording all voxels visited that satisfy 2 conditions:
-% pi is the initial point (a vector of 2 usigned integers)
+% This function starts at a point, a voxel, and performs a "n-dimentional random walk"
+% where n is the length of the current vector of voxels.
+% Any voxels visited that are of the same tissue type and are not
+% already in list are added to the list. Terminated when it reaches target
+% volume or more than 100-time-target-volume of steps.
 dims = size(volume);
 inclusion.voxels =[pi];
 loc=pi;
