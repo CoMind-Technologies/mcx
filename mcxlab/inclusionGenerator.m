@@ -1,5 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% tdNIRS simulation in colin27 voxel tissue model
+% A"how it works" script, making evident some functionality of MCX
+% Idea is to show a few things:
+%   1) How the detector location effects the "pre-processing" of the volume
+%   shape.
+%   2) how adding an inclusion effects pre-processing of volume shape.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 clear cfg;
@@ -8,16 +12,9 @@ try % Allows for use of MXCLABCL is on a non-NVIDIA machine.
 catch
     USE_MCXCL=1;
 end
-%% Define default simulation parameters
-% set seed to make the simulation repeatible
-cfg.seed=hex2dec('623F9A9E'); 
-% Volume model being used.
-VOLUME='brain';
-inclusion = 0;
-cfg.nphoton=1e4;
-
+%% Upload a default volume
 load colin27_v3.mat
-cfg.vol=colin27;
+cfg.vol=colin27; % The default volume is 
 % Each line below defines the optical parameters for that tissue type:
 % mua (absorption) mus (scattering) g (anisotropy) and 'n'
 cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
@@ -27,29 +24,47 @@ cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
         0.0200    9.0000    0.8900    1.3700 %(4) gray matters
         0.0800   40.9000    0.8400    1.3700 %(5) white matters
              0         0    1.0000    1.0000]; %(6) air pockets
-         
+% %         
 cfg.srcpos=[75 14 73]; %Source position
-cfg.detpos=[75 18 92 5]; %Detector Position
-yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))); % Define the planes for plotting
-xy_plane = int16(0.5*(cfg.srcpos(3)+cfg.detpos(3)));
-% if inclusion
-%     incl_origin = [75,35, 85];
-%     incl_radius = 2;
-%     cfg.shapes = sprintf('{"Shapes":[{"Sphere": {"Tag":7, "O":[%d,%d,%d],"R":%d}}]}',[incl_origin,incl_radius]);
-%     cfg.prop = [cfg.prop; 100.0 0 0 1.0000]; %(7) inclusion
-%     yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))) % Define the planes for imagine later
-%     xy_plane = int8(0.5*(cfg.srcpos(3)+cfg.detpos(3)))
-% end
-
+cfg.srcdir=[0.0 1.0 0.0, 5.0];% define the source DIRECTION
 % time-domain simulation parameters
 cfg.tstart=0;% Start
 cfg.tend=5e-9;% Stop
 cfg.tstep=2e-10;% timestep
-
-cfg.srcdir=[0.0 1.0 0.0, 5.0];% define the source DIRECTION
+% Above are all essential. Next is just a choice.
 cfg.issrcfrom0 = 0; % Defines the location of the origin: 0 or 1 (0 here).
-cfg.isreflect=0; % enable reflection at exterior boundary
-cfg.isrefint=1;  % enable reflection at interior boundary too
+cfg.nphoton=0; % Number of photons
+%% Visualise it:
+mcxpreview(cfg)
+%% Now "process" it through mcx:
+[fluence,detphoton,vol] = mcxlab(cfg);
+%% And visualise output...
+out=cfg;
+out.vol=vol.data;
+mcxpreview(out);
+% Above should work, and look the same!
+%% Now include an inclusion
+incl_origin = [75 25 92];
+incl_radius = 2;
+cfg.shapes = [sprintf('{"Shapes":[{"Sphere": {"Tag":7, "O":[%d,%d,%d],"R":%d}}]}',[incl_origin,incl_radius])];
+cfg.prop = [cfg.prop(1:7,:); 0.0800   40.9000    0.8400    1.3700]; %(7) inclusion
+%yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))) % Define the planes for imagine later
+%xy_plane = int8(0.5*(cfg.srcpos(3)+cfg.detpos(3)))
+% And visualise:
+mcxpreview(cfg);
+%% Now "process" it through mcx:
+[fluence,detphoton,vol] = mcxlab(cfg);
+%% And visualise output...
+out.vol=vol.data;
+mcxpreview(out);
+% Now what's weird here is ONLY thr inclusion remains?!
+%% Now include a detector
+cfg.detpos=[75 18 92 5]; %Detector Position
+yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))); % Define the planes for plotting
+xy_plane = int16(0.5*(cfg.srcpos(3)+cfg.detpos(3)));
+
+% cfg.isreflect=0; % enable reflection at exterior boundary
+% cfg.isrefint=1;  % enable reflection at interior boundary too
 
 %% Define OUTPUT settings 
 cfg.issavedet=0; % Record partial pathlength of detected photons

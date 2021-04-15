@@ -3,22 +3,19 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 clear cfg;
-try % Allows for use of MXCLABCL is on a non-NVIDIA machine.
+try
     gpuinfo=mcxlab('gpuinfo');
 catch
     USE_MCXCL=1;
 end
-%% Define default simulation parameters
+%% Define simulation parameters
 % set seed to make the simulation repeatible
 cfg.seed=hex2dec('623F9A9E'); 
 % Volume model being used.
-VOLUME='brain';
-inclusion = 0;
-cfg.nphoton=1e4;
-
+volumeName='colin27';
 load colin27_v3.mat
 cfg.vol=colin27;
-% Each line below defines the optical parameters for that tissue type:
+%% Define optical properties:
 % mua (absorption) mus (scattering) g (anisotropy) and 'n'
 cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
         0.0190    7.8182    0.8900    1.3700 %(1) scalp
@@ -27,19 +24,23 @@ cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
         0.0200    9.0000    0.8900    1.3700 %(4) gray matters
         0.0800   40.9000    0.8400    1.3700 %(5) white matters
              0         0    1.0000    1.0000]; %(6) air pockets
+%% Pick an inclusion file:
+inclusionType = "csf";
+inclusionsFile = sprintf("inclusions\\%s_%s_500vol.mat",volumeName,inclusionType);
+load(inclusionsFile);
          
 cfg.srcpos=[75 14 73]; %Source position
-cfg.detpos=[75 18 92 5]; %Detector Position
-yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))); % Define the planes for plotting
-xy_plane = int16(0.5*(cfg.srcpos(3)+cfg.detpos(3)));
-% if inclusion
-%     incl_origin = [75,35, 85];
-%     incl_radius = 2;
-%     cfg.shapes = sprintf('{"Shapes":[{"Sphere": {"Tag":7, "O":[%d,%d,%d],"R":%d}}]}',[incl_origin,incl_radius]);
-%     cfg.prop = [cfg.prop; 100.0 0 0 1.0000]; %(7) inclusion
+% cfg.detpos=[75 18 92 10]; %Detector Position
+% yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))); % Define the planes for plotting
+% xy_plane = int16(0.5*(cfg.srcpos(3)+cfg.detpos(3)));
+if inclusion
+    incl_origin = [85,40, 85];
+    incl_radius = 5;
+    cfg.shapes = sprintf('{"Shapes":[{"Sphere": {"Tag":7, "O":[%d,%d,%d],"R":%d}}]}',[incl_origin,incl_radius]);
+    cfg.prop = [cfg.prop(1:7,:); 100.0 0 0 1.0000]; %(7) inclusion
 %     yz_plane = int8(0.5*(cfg.srcpos(1)+cfg.detpos(1))) % Define the planes for imagine later
 %     xy_plane = int8(0.5*(cfg.srcpos(3)+cfg.detpos(3)))
-% end
+end
 
 % time-domain simulation parameters
 cfg.tstart=0;% Start
@@ -50,7 +51,10 @@ cfg.srcdir=[0.0 1.0 0.0, 5.0];% define the source DIRECTION
 cfg.issrcfrom0 = 0; % Defines the location of the origin: 0 or 1 (0 here).
 cfg.isreflect=0; % enable reflection at exterior boundary
 cfg.isrefint=1;  % enable reflection at interior boundary too
-
+%% Visualise
+figure
+hold on
+title(sprintf("Colin27 cerebral tissue atlas with sphereical inclusion at (%d,%d,%d)",incl_origin))
 %% Define OUTPUT settings 
 cfg.issavedet=0; % Record partial pathlength of detected photons
 cfg.ismomentum=0; % Save photon momentums
@@ -68,9 +72,8 @@ cfg.gpuid=1;%
 fprintf('running simulation ...\n');
 tic;
 %[f2,det2]=mcxlabcl(cfg);
-[fluence,detphoton,vol,seed,trajectory] = mcxlab(cfg);
+[fluence,detphoton,vol,seed,trajectory] = mcxlabcl(cfg);
 toc;
-
 
 % Everything above here runs fine. The next section throws the "Invalid
 % Buffer" error

@@ -3,7 +3,7 @@ function varargout=mcxlab(varargin)
 %====================================================================
 %      MCXLAB - Monte Carlo eXtreme (MCX) for MATLAB/GNU Octave
 %--------------------------------------------------------------------
-%Copyright (c) 2011-2021 Qianqian Fang <q.fang at neu.edu>
+%Copyright (c) 2011-2020 Qianqian Fang <q.fang at neu.edu>
 %                      URL: http://mcx.space
 %====================================================================
 %
@@ -424,7 +424,7 @@ if(nargout>=2)
         if(isfield(cfg(i),'ismomentum') && cfg(i).ismomentum)
             cfg(i).savedetflag=[cfg(i).savedetflag,'M'];
         end
-        if(ndims(cfg(i).vol)==4 && size(cfg(i).vol,1)~=8)
+        if(ndims(cfg(i).vol)==4)
             cfg(i).savedetflag='';
             if((isa(cfg(i).vol,'single') || isa(cfg(i).vol,'double')) && isfield(cfg(i),'unitinmm'))
                 cfg(i).vol=cfg(i).vol*cfg(i).unitinmm;

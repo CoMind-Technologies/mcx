@@ -55,7 +55,7 @@ mcx_gpu_benchmarks
 %%  generate benchmark report
 
 mcxbenchmark.version=1;
-mcxbenchmark.mcxversion='$Date::                       $';
+mcxbenchmark.mcxversion='$Date::2020-09-07 13:18:12 -04$';
 mcxbenchmark.userinfo=struct('name',mcxuser{1},'email',mcxuser{2},'nickname',mcxuser{3},...
   'institution',mcxuser{4},'machine',mcxuser{5},'comment',mcxuser{6});
 
