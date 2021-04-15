@@ -16,7 +16,7 @@ cfg.seed=hex2dec('623F9A9E');
 % Volume model being used.
 load colin27_v3.mat
 cfg.vol=colin27;
-cfg.nphoton=1e6;
+cfg.nphoton=10;
 % Each line below defines the optical parameters for that tissue type:
 % mua (absorption) mus (scattering) g (anisotropy) and 'n'
 cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
@@ -34,6 +34,15 @@ cfg.srcdir=[0.0 1.0 0.0, 5.0];% define the source DIRECTION
 cfg.tstart=0;% Start
 cfg.tend=5e-9;% Stop
 cfg.tstep=2e-10;% timestep  
+figure(1)
+mcxpreview(cfg)
+
+%% Add some inclusions:
+cfg.shapes = [sprintf('{"Shapes":[{"Sphere": {"Tag":7, "O":[%d,%d,%d],"R":%d}},',[75,14,80,2]) ...
+    '{"ZLayers":[[70,73,7],[80,83,7]]}' ...
+    ']}'];
+figure(2)
+mcxpreview(cfg)
 %% GPU thread configuration
 cfg.autopilot=1;% Let MCX decide how many threads are important
 cfg.gpuid=1;% 
