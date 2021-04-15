@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% tdNIRS simulation in colin27 voxel tissue model
-% Adding a spherical inclusion
+% Photonics simulation via MCXLAB in a simple tissue model built up in
+% script.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 clear cfg;
@@ -37,7 +37,7 @@ cfg.detpos = [40,cfg.srcpos(2),cfg.srcpos(3),10]; % [x,y,z,radius]
 mcxpreview(cfg)
 %% Run a simulation and visualise the data:
 cfg.bc='a'; % Impose an absorbative boundary condition
-[fluence,detphotons,~,seeds]=mcxcl(cfg);
+[fluence,detphotons,~,seeds,trajectories]=mcxlab(cfg);
 %% Visualise again
 horiz = squeeze(cfg.vol(:, :, cfg.srcpos(3)));
 figure
