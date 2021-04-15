@@ -7,10 +7,9 @@ clear cfg;
 %% preparing the input data
 % set seed to make the simulation repeatible
 cfg.seed=hex2dec('623F9A9E'); 
-
 VOLUME='brain';
 
-cfg.nphoton=1e7;
+cfg.nphoton=1e4;
 
 if strcmp(VOLUME, 'brain')
     load colin27_v3.mat
@@ -23,7 +22,7 @@ if strcmp(VOLUME, 'brain')
             0.0800   40.9000    0.8400    1.3700 % white matters
                  0         0    1.0000    1.0000]; % air pockets
     cfg.srcpos=[75 14 73];
-    cfg.detpos=[75 18 92 5];
+    cfg.detpos=[75 20 92 5];
     
 elseif strcmp(VOLUME, 'cube')
     dim=60;
@@ -41,9 +40,7 @@ end
 % define the source position
 
 cfg.srcdir=[0.0 1.0 0.0, 5.0];
-%cfg.srcdir=[0.0 0.0 -1.0 5.0];
 %cfg.srctype='gaussian';
-%cfg.srcparam1=[10 0 0 0];
 %cfg.srcparam2=[0 0 0 0];
 
 % 1 = first voxel is [0 0 0]
@@ -67,14 +64,11 @@ cfg.ismomentum=1;
 cfg.issaveref=1;
 cfg.issaveexit=1;
 cfg.replaydet=1;
-
+%% Run the simulation
 tic;
-%[f2,det2]=mcxlabcl(cfg);
 [fluence,detphoton,vol,seed,trajectory] = mcxlabcl(cfg);
 toc;
-
-%% Replay detected photons
-
+%% Replay detected photons, to get jacobians.
 newcfg=cfg;
 newcfg.seed=seed.data;
 newcfg.outputtype='jacobian';
