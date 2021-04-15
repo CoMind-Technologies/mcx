@@ -55,11 +55,11 @@ tic;
 [fluence,detphoton,~,seed,trajectory] = mcxlab(cfg);
 toc;
 %% Setting up sets of cfg's
-rng(5) % Standardise the random number generator
+rng('default') % Default the rng
 numRuns = 100;
 inclusion_xyz = meshgrid(18:22,28:32,12:16);
 incl_prop = [0.11         1.   0.6       1.37];
-cfg_set=[cfg];
+cfg_set=[];
 for i = 1:3
     cfg_ = cfg;% New spec.
     cfg_.vol(inclusion_xyz)=7;
@@ -69,10 +69,10 @@ for i = 1:3
     cfg_.seed=seed.data;
     cfg_.outputtype='jacobian';
     cfg_.detphotons=detphoton.data;
+    cfg_set=[cfg_set,cfg_];
 end
 %% Run big sim
-[flux2, detp2, vol2, seeds2, traj2]=mcxlab(cfg_set);
-
+[flux2, detp2, vol2, seeds2,traj2]=mcxlab(cfg_set);
 %% plot the results
 figure
 
