@@ -12,7 +12,7 @@ catch
 end
 
 %% Define bare minimum simulation configuration (cfg)
-cfg.nphoton=1e7; % Number of photons
+cfg.nphoton=1e8; % Number of photons
 cfg.vol = uint8(zeros(110,110,110)); % A uniform 'null' zone (0)
 cfg.vol(5:105,5:105,5:105)=1; % Material 1 zone
 cfg.prop = [0 0 1 1; % Line 1 is for zeros, but these are 'vanishing' points.
@@ -55,7 +55,7 @@ ylabel('X')
 colorbar;
 
 subplot(122)
-histogram(detphotons.data(4,:))
+histogram(detphotons.data(2,:))
 set(gca,'Yscale','log');
 xlabel("Momentum at detection [a.u.]")
 ylabel("Count")
@@ -69,10 +69,10 @@ jacobian=sum(newFluence.data,4); % The jacobian, summed over time gates
 %% And visualise
 figure(1)
 subplot(121)
+hold on
 contourf(log10(squeeze(sum(newFluence.data(:,:,cfg.srcpos(3),:),4))));
 hold on
 imcontour(horiz,'k')
-hold on
 title('Detected photon fluence in source (y,x)-plane');
 xlabel("Y")
 ylabel("X")
