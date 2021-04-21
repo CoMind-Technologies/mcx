@@ -48,22 +48,24 @@ save('../configs/fourLayer_slab.mat','cfg')
 % inclusion ranges differ by depth and size
 rng('default') % Default the rng
 inclusion_depths =[14 18 22 26 30 34 38 42]; % in mm, from surface
-inclusion_width = [0.5 1 2 4];% in mm.
+inclusion_widths = [0.5 1 2 4];% in mm.
 % create inclusion indices, in voxel space
-incl_indices=[];
-for i = 1:3
-    cfg_ = cfg;% New spec.
-    cfg_.vol(inclusion_xyz)=7;
-    cfg_.prop=[cfg.prop; incl_prop];
-    cfg_.prop(end,1)=(0.5+rand(1))*incl_prop(1);
-    cfg_.replaydet=1;
-    cfg_.seed=seed.data;
-    cfg_.outputtype='jacobian';
-    cfg_.detphotons=detphoton.data;
-    cfg_set=[cfg_set,cfg_];
+inclusion_set=[];
+for d = inclusion_depths
+    for w = inclusion_widths
+        x0 = cfg.srcpos(1)-floor(0.5*w/cfg.unitinmm);
+        x1 = cfg.srcpos(1)+ceil(0.5*w/cfg.unitinmm);
+        y0 = cfg.srcpos(2)-floor(0.5*w/cfg.unitinmm);
+        y1 = cfg.srcpos(2)+ceil(0.5*w/cfg.unitinmm);
+        z1 = surface_z-(d/cfg.unitinmm);
+        z0 = z1-(w/cfg.unitinmm);
+        incl.xyz=meshgrid(x0:x1,y0:y1,z0:z1);
+        incl.idx=sub2ind(cfg.dims,incl.xyz);
+        inclusion_set=[inclusion_set incl];
+    end
 end
 % Properties of inlcusion (haemoglobin?)
-incl_prop = [0.11         1.   0.6       1.37];
+incl_prop = [0.0800    9.0000    0.8900    1.3700];
 %% Ammend with simulation properties
 cfg.nphoton=1e7;
 cfg.tstart=0;
