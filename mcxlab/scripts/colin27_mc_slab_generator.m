@@ -9,11 +9,11 @@ catch
     USE_MCXCL=1;
 end
 %% Preparing the volume
-% set seed to make the simulation repeatible
-cfg.seed=hex2dec('623F9A9E'); 
+% Load colin 27
 load colin27_v3.mat;
 % Remove a 'cube' above right ear
-cfg.vol=colin27(120:180,70:130,65:90);
+% This core volume is simply 60mm (width)x80cm (depth) x 25cm (height)
+cfg.vol= colin27(120:180,70:130,65:90);
 cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
         0.0190    7.8182    0.8900    1.3700 %(1) scalp
         0.0190    7.8182    0.8900    1.3700 %(2) skull
