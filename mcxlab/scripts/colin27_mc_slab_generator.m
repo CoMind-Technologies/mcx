@@ -31,30 +31,11 @@ cfg.srcdir = [-1.0 0. 0.0];
 cfg.detpos=[0,ceil(0.75*dims(2)),double(cfg.srcpos(3)),2];
 cfg.detpos(1)=find(cfg.vol(:,cfg.detpos(2),cfg.detpos(3)),1,'last'); 
 %% Preview
-mcxpreview(cfg)
-%% Simulation parameters
-% time-domain simulation parameters
-cfg.nphoton=1e8;
-cfg.tstart=0;
-cfg.tend=5e-9;
-cfg.tstep=2e-10;
-
-fprintf('running simulation ...\n');
-cfg.isreflect=0; % enable reflection at exterior boundary
-cfg.isrefint=1;  % enable reflection at interior boundary too
-cfg.issavedet=1; % enable recording partial pathlength of detected photons
-cfg.ismomentum=1;
-cfg.issaveref=1;
-cfg.issaveexit=1;
-cfg.replaydet=1;
-% GPU Config
-cfg.autopilot=1;
-cfg.gpuid=1;
-%% Running simulation
-tic;
-[fluence,detphoton,~,seed,trajectory] = mcxlab(cfg);
-toc;
-%% Setting up sets of cfg's
+% Uncomment the below line to preview the tissue
+% mcxpreview(cfg)
+%% save the config
+save('../configs/colin27_mc_slab.mat','cfg')
+%% Generate copies with inclusions?
 rng('default') % Default the rng
 numRuns = 100;
 inclusion_xyz = meshgrid(18:22,28:32,12:16);
