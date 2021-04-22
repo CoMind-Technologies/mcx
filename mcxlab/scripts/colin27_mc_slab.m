@@ -1,5 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% tdNIRS simulations in head-tissue slab model with varying inclusions
+% A MCX simulation of photonics througha 'core of motor cortex' (mc)
+% The 'core' is taken from Colin27
+% NOTE: voxels are (1mm)^3 volume
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 clear cfg;
