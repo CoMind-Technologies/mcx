@@ -23,19 +23,7 @@ for i=1:length(csf_inclusions)
     end
 end
 %% Create a basline simulation config file and a set for each inclusion
-cfg0.nphoton=5e5; % number of photons
-cfg0.tstart=0;
-cfg0.tend=5e-9;
-cfg0.tstep=2e-10;
-cfg0.isreflect=1; % enable reflection at exterior boundary. Kinda cheating
-cfg0.isrefint=1;  % enable reflection at interior boundary too
-cfg0.issavedet=0; % Record partial pathlength of detected photons
-cfg0.ismomentum=1; % Record momenta of detected photons
 cfg0.vol=colin27; % cfg0 is 'reality': incl. inclusions:
-cfg0.srcpos=[149 75 149];
-cfg0.srcdir=normalize([-1 0 -1],'norm');
-cfg0.detpos=[137 75 160 4
-             149 65 145 4];
 cfg0.prop=[  0         0         1.0000    1.0000 % (0) background/air
             0.0190    7.8182    0.8900    1.3700 % (1) scalp
             0.0190    7.8182    0.8900    1.3700 % (2) skull
@@ -43,26 +31,33 @@ cfg0.prop=[  0         0         1.0000    1.0000 % (0) background/air
             0.0200    9.0000    0.8900    1.3700 % (4) gray matters
             0.0800   40.9000    0.8400    1.3700 % (5) white matters
                  0         0    1.0000    1.0000]; % (6) air pockets
-% GPU Config
-cfg0.autopilot=1;
-cfg0.gpuid=1;
-% Now create copies; for nwo just 1
+
+% Now create copies for inclusions
 cfg_incl=cfg0;
+cfg_incl.nphoton=5e5; % number of photons
+cfg_incl.srcpos=[149 75 149];
+cfg_incl.srcdir=normalize([-1 0 -1],'norm');
+cfg_incl.detpos=[137 75 160 4
+             149 65 145 4];
+cfg_incl.tstart=0;
+cfg_incl.tend=5e-9;
+cfg_incl.tstep=2e-10;
+cfg_incl.isreflect=1; % enable reflection at exterior boundary. Kinda cheating
+cfg_incl.isrefint=1;  % enable reflection at interior boundary too
+cfg_incl.issavedet=0; % Record partial pathlength of detected photons
+cfg_incl.ismomentum=1; % Record momenta of detected photons
 % Add the inclusion and give it a type number
 cfg_incl.vol(csf_inclusions(set_indices(1)).indices)=max(max(max(colin27)))+1;
 % Ammend the properties spec:
 cfg_incl.prop=[cfg0.prop; .01  0.0090    0.8900    1.3700]; % Only pert absorbtion
-% mcxpreview(cfg1)
+% GPU Config
+cfg_incl.autopilot=1;
+cfg_incl.gpuid=1;
+mcxpreview(cfg_incl)
 %% Run baseline; i.e. with inclusion
 fprintf('Running baseline simulation ...\n');
 [fluence,detphotons,~,seeds]=mcxlab(cfg_incl);
-%% Now get ABSORPTION jacobians
-cfg0.outputtype='jacobian';
-cfg0.detphotons=detphotons.data;
-cfg0.seed=seeds.data;
-fprintf('Computing Jacobian...\n');
-[flux2, detp2, vol2, seeds2]=mcxlab(cfg0);
-jacobian = sum(flux2,4); % Summing over time gates
-%% Now update the baseline assumption...
-% Find all non-zero vozels of the jacobian:
-effected_tissues=cfg0.vol(find(jacobian));
+cfg_incl.dephotons=detphotons; % Add detected photons to config file
+%% Save both
+save('./configs/colin27_cfg.mat','cfg0');
+save('./configs/colin27_cfs_inclusion_cfg.mat','cfg_incl');
