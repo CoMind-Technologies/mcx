@@ -1,3 +1,7 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% This script builds a set of "scans" of volumes (usually with inclusions)
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 clear cfg0;
 try
@@ -34,11 +38,14 @@ cfg0.prop=[  0         0         1.0000    1.0000 % (0) background/air
 
 % Now create copies for inclusions
 cfg_incl=cfg0;
-cfg_incl.nphoton=5e5; % number of photons
+cfg_incl.nphoton=2e6; % number of photons
+% The below source specifications are done by hand. This is not great;
+% This will need to be done 'automatically' going forward.
 cfg_incl.srcpos=[149 75 149];
 cfg_incl.srcdir=normalize([-1 0 -1],'norm');
 cfg_incl.detpos=[137 75 160 4
              149 65 145 4];
+%$ Time gates.
 cfg_incl.tstart=0;
 cfg_incl.tend=5e-9;
 cfg_incl.tstep=2e-10;
@@ -53,11 +60,15 @@ cfg_incl.prop=[cfg0.prop; .01  0.0090    0.8900    1.3700]; % Only pert absorbti
 % GPU Config
 cfg_incl.autopilot=1;
 cfg_incl.gpuid=1;
-mcxpreview(cfg_incl)
+% mcxpreview(cfg_incl)
+%% Save both
+save('./configs/colin27_cfg.mat','cfg0');
+save('./configs/colin27_cfs_incl_setup_5e5.mat','cfg_incl');
 %% Run baseline; i.e. with inclusion
 fprintf('Running baseline simulation ...\n');
 [fluence,detphotons,~,seeds]=mcxlab(cfg_incl);
 cfg_incl.dephotons=detphotons; % Add detected photons to config file
-%% Save both
-save('./configs/colin27_cfg.mat','cfg0');
-save('./configs/colin27_cfs_inclusion_cfg.mat','cfg_incl');
+cfg_incl.vol=colin27; % reset to baseline
+cfg_incl.prop=cfg0.prop; % same for properties
+%% Save the inclusion config with base paramsters
+save(sprintf('./configs/colin27_cfs_incl_unresolved_%.0eBy8.mat',cfg_incl.nphoton),'cfg_incl');
