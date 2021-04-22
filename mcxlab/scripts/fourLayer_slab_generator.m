@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% A MCX simulation of photonics througha 'core of motor cortex' (mc)
-% The 'core' is taken from Colin27
-% NOTE: voxels are (1mm)^3 volume
+% Builds a 'default' slab model and a set of identical volumes with
+% inclusions.
+% Saves a default configuration file and (separately) the inclusion volumes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 clear cfg;
@@ -10,33 +10,64 @@ try
 catch
     USE_MCXCL=1;
 end
-%% Preparing the volume
-% set seed to make the simulation repeatible
-cfg.seed=hex2dec('623F9A9E'); 
-load colin27_v3.mat;
-% Remove a 'cube' above right ear
-cfg.vol=colin27(120:180,70:130,65:90);
+%% Setup
+% All numbers in mm. Will be converted to volume via cfg.unitmm
+% (effective spatial resolution)
+cfg.unitinmm=0.5; % voxels are (0.5 mm)^3 volumes
+dims = [50,50,100]; % x,y,z dimensions in mm
+cfg.vol=zeros(dims(1)/cfg.unitinmm,dims(2)/cfg.unitinmm,dims(3)/cfg.unitinmm,'uint8');
+cfg.dims=size(cfg.vol); % Could cause a problem?
+% 
+surface_z = double((dims(3)-30)/cfg.unitinmm+1);
+cfg.vol(:,:,surface_z:end)=5; % 3cm of air at surface
+cfg.vol(:,:,end-35/cfg.unitinmm+1:end-30/cfg.unitinmm)=1; % 5 mm of scalp
+cfg.vol(:,:,end-42/cfg.unitinmm+1:end-35/cfg.unitinmm)=2; % 7 mm of skull
+cfg.vol(:,:,end-47/cfg.unitinmm+1:end-42/cfg.unitinmm)=3; % 1 mm of csf
+cfg.vol(:,:,1:end-47/cfg.unitinmm)=4; % etc. is 'grey-matter'
+
+%          % absorp | red. scat | anisotropy | rarefrac. index 
 cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
-        0.0190    7.8182    0.8900    1.3700 %(1) scalp
-        0.0190    7.8182    0.8900    1.3700 %(2) skull
-        0.0040    0.0090    0.8900    1.3700 %(3) csf
-        0.0200    9.0000    0.8900    1.3700 %(4) gray matters
-        0.0800   40.9000    0.8400    1.3700 %(5) white matters
-             0         0    1.0000    1.0000]; %(6) air pockets
-% Create 
-dims = size(cfg.vol);
-cfg.srcpos=[0,uint8(0.2*dims(2)),uint8(0.5*dims(3))];
-% To place the source, we need to find the outmost (largest x) non-zero cell
-cfg.srcpos(1)=find(cfg.vol(:,cfg.srcpos(2),cfg.srcpos(3)),1,'last'); 
-cfg.srcdir = [-1.0 0. 0.0];
-% Create a detector
-cfg.detpos=[0,ceil(0.75*dims(2)),double(cfg.srcpos(3)),2];
-cfg.detpos(1)=find(cfg.vol(:,cfg.detpos(2),cfg.detpos(3)),1,'last'); 
-%% Preview
-mcxpreview(cfg)
-%% Simulation parameters
-% time-domain simulation parameters
-cfg.nphoton=1e8;
+            0.0190    7.8182    0.8900    1.3700 % (1) scalp
+            0.0190    7.8182    0.8900    1.3700 % (2) skull
+            0.0040    0.0090    0.8900    1.3700 % (3) csf
+            0.0200    9.0000    0.8900    1.3700 % (4) gray matters
+%            0.0800   40.9000    0.8400    1.3700 % (-) white matters
+                 0         0    1.0000    1.0000]; % (5) air pockets
+cfg.srcpos=[0.5*cfg.dims(1) 0.5*cfg.dims(2) surface_z]; % Source position
+cfg.srcdir=[0 0 -1]; % Source direction
+% Detector details
+det_distance=30; % distance from source, in mm
+det_radius=3; % detector radius, in mm
+cfg.detpos=[cfg.srcpos(1)-sqrt(det_distance/cfg.unitinmm) cfg.srcpos(2)-sqrt(det_distance/cfg.unitinmm) cfg.srcpos(3) det_radius/cfg.unitinmm % Detector 1
+            cfg.srcpos(1)+sqrt(det_distance/cfg.unitinmm) cfg.srcpos(2)-sqrt(det_distance/cfg.unitinmm) cfg.srcpos(3) det_radius/cfg.unitinmm % Detector 2
+            cfg.srcpos(1)-sqrt(det_distance/cfg.unitinmm) cfg.srcpos(2)+sqrt(det_distance/cfg.unitinmm) cfg.srcpos(3) det_radius/cfg.unitinmm % Detector 2
+            cfg.srcpos(1)+sqrt(det_distance/cfg.unitinmm) cfg.srcpos(2)+sqrt(det_distance/cfg.unitinmm) cfg.srcpos(3) det_radius/cfg.unitinmm]; % Detector 3
+%mcxpreview(cfg)
+save('../configs/fourLayer_slab.mat','cfg')
+%% Creating set of inclusions
+% inclusion ranges differ by depth and size
+rng('default') % Default the rng
+inclusion_depths =[14 18 22 26 30 34 38 42]; % in mm, from surface
+inclusion_widths = [0.5 1 2 4];% in mm.
+% create inclusion indices, in voxel space
+inclusion_set=[];
+for d = inclusion_depths
+    for w = inclusion_widths
+        x0 = cfg.srcpos(1)-floor(0.5*w/cfg.unitinmm);
+        x1 = cfg.srcpos(1)+ceil(0.5*w/cfg.unitinmm);
+        y0 = cfg.srcpos(2)-floor(0.5*w/cfg.unitinmm);
+        y1 = cfg.srcpos(2)+ceil(0.5*w/cfg.unitinmm);
+        z1 = surface_z-(d/cfg.unitinmm);
+        z0 = z1-(w/cfg.unitinmm);
+        incl.xyz=meshgrid(x0:x1,y0:y1,z0:z1);
+        incl.idx=sub2ind(cfg.dims,incl.xyz);
+        inclusion_set=[inclusion_set incl];
+    end
+end
+% Properties of inlcusion (haemoglobin?)
+incl_prop = [0.0800    9.0000    0.8900    1.3700];
+%% Ammend with simulation properties
+cfg.nphoton=1e7;
 cfg.tstart=0;
 cfg.tend=5e-9;
 cfg.tstep=2e-10;
@@ -56,23 +87,6 @@ cfg.gpuid=1;
 tic;
 [fluence,detphoton,~,seed,trajectory] = mcxlab(cfg);
 toc;
-%% Setting up sets of cfg's
-rng('default') % Default the rng
-numRuns = 100;
-inclusion_xyz = meshgrid(18:22,28:32,12:16);
-incl_prop = [0.11         1.   0.6       1.37];
-cfg_set=[];
-for i = 1:3
-    cfg_ = cfg;% New spec.
-    cfg_.vol(inclusion_xyz)=7;
-    cfg_.prop=[cfg.prop; incl_prop];
-    cfg_.prop(end,1)=(0.5+rand(1))*incl_prop(1);
-    cfg_.replaydet=1;
-    cfg_.seed=seed.data;
-    cfg_.outputtype='jacobian';
-    cfg_.detphotons=detphoton.data;
-    cfg_set=[cfg_set,cfg_];
-end
 %% Run big sim
 [flux2, detp2, vol2, seeds2,traj2]=mcxlab(cfg_set);
 %% plot the results
