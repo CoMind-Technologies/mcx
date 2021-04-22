@@ -89,7 +89,7 @@ cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
         0.0800   40.9000    0.8400    1.3700 %(5) white matters
              0         0    1.0000    1.0000 %(6) air pockets
           0.11         1.   0.6       1.37]; %(7) inclusions (blood?)
-%%  Try find the larget ones?
+%%  Try find ones closest to the crown?
 maxes= [0 0 0 0];
 idx = [0 0 0 0];
 for i=1:length(greyMatter.inclusions)
