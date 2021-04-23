@@ -17,8 +17,8 @@ load colin27_csf_500vol.mat
 %% Cherry pick the ones closest to the crown
 maxes= [0 0 0 0];
 set_indices = [0 0 0 0];
-for i=1:length(csf_inclusions)
-    max_z = max(csf_inclusions(i).voxels(:,3));
+for i=1:length(inclusions)
+    max_z = max(inclusions(i).voxels(:,3));
     if maxes(end)<max_z
         maxes(1:3)=maxes(2:4);
         set_indices(1:3)=set_indices(2:4);
@@ -27,8 +27,8 @@ for i=1:length(csf_inclusions)
     end
 end
 %% Create a basline simulation config file and a set for each inclusion
-cfg0.vol=colin27; % cfg0 is 'reality': incl. inclusions:
-cfg0.prop=[  0         0         1.0000    1.0000 % (0) background/air
+colin27_cfg.vol=colin27; % cfg0 is 'reality': incl. inclusions:
+colin27_cfg.prop=[  0         0         1.0000    1.0000 % (0) background/air
             0.0190    7.8182    0.8900    1.3700 % (1) scalp
             0.0190    7.8182    0.8900    1.3700 % (2) skull
             0.0040    0.0090    0.8900    1.3700 % (3) csf
@@ -37,8 +37,8 @@ cfg0.prop=[  0         0         1.0000    1.0000 % (0) background/air
                  0         0    1.0000    1.0000]; % (6) air pockets
 
 % Now create copies for inclusions
-cfg_incl=cfg0;
-cfg_incl.nphoton=2e9; % number of photons
+cfg_incl=colin27_cfg;
+cfg_incl.nphoton=2e7; % number of photons
 % The below source specifications are done by hand. This is not great;
 % This will need to be done 'automatically' going forward.
 cfg_incl.srcpos=[149 75 149];
@@ -54,21 +54,25 @@ cfg_incl.isrefint=1;  % enable reflection at interior boundary too
 cfg_incl.issavedet=0; % Record partial pathlength of detected photons
 cfg_incl.ismomentum=1; % Record momenta of detected photons
 % Add the inclusion and give it a type number
-cfg_incl.vol(csf_inclusions(set_indices(1)).indices)=max(max(max(colin27)))+1;
+cfg_incl.vol(inclusions(set_indices(1)).indices)=max(max(max(colin27)))+1;
 % Ammend the properties spec:
-cfg_incl.prop=[cfg0.prop; .01  0.0090    0.8900    1.3700]; % Only pert absorbtion
+cfg_incl.prop=[colin27_cfg.prop; .01  0.0090    0.8900    1.3700]; % Only pert absorbtion
 % GPU Config
 cfg_incl.autopilot=1;
 cfg_incl.gpuid=1;
 % mcxpreview(cfg_incl)
 %% Save both
-save('./configs/colin27_cfg.mat','cfg0');
+save('./configs/colin27_cfg.mat','colin27_cfg');
 save('./configs/colin27_cfs_incl_setup_5e5.mat','cfg_incl');
 %% Run baseline; i.e. with inclusion
 fprintf('Running baseline simulation ...\n');
 [fluence,detphotons,~,seeds]=mcxlab(cfg_incl);
-cfg_incl.dephotons=detphotons; % Add detected photons to config file
-cfg_incl.vol=colin27; % reset to baseline
-cfg_incl.prop=cfg0.prop; % same for properties
+%% - Build 'unresolved' config object
+cfg0=cfg_incl;
+cfg0.detphotons=detphotons.data; % Add detected photons to config file
+cfg0.seed=seeds.data;
+cfg0.vol=colin27; % reset to baseline
+cfg0.prop=colin27_cfg.prop; % same for properties
+cfg0.outputtype='jacobian';
 %% Save the inclusion config with base paramsters
-save(sprintf('./configs/colin27_cfs_incl_unresolved_%.0eBy8.mat',cfg_incl.nphoton),'cfg_incl');
+save(sprintf('./configs/colin27_cfs_incl_unresolved_%.0eBy8.mat',cfg_incl.nphoton),'cfg0');
