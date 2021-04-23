@@ -38,7 +38,7 @@ cfg0.prop=[  0         0         1.0000    1.0000 % (0) background/air
 
 % Now create copies for inclusions
 cfg_incl=cfg0;
-cfg_incl.nphoton=2e6; % number of photons
+cfg_incl.nphoton=2e9; % number of photons
 % The below source specifications are done by hand. This is not great;
 % This will need to be done 'automatically' going forward.
 cfg_incl.srcpos=[149 75 149];

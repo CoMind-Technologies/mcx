@@ -47,7 +47,8 @@ end
 % each inclusion.
 %% Save generated inclusion files
 inclusions = csf.inclusions;
-save(sprintf('./inclusions/%s_csf_%dvol.mat',volume_name,vox_volume),'inclusions');
+file_name=sprintf('./inclusions/%s_csf_%dvol.mat',volume_name,vox_volume);
+save(file_name,'inclusions');
 clear inclusions;
 %% Making Grey Matter inclusions:
 s = RandStream('mlfg6331_64');
@@ -67,7 +68,8 @@ end
 % This is Done for now.
 %% Save generated inclusion files
 inclusions = greyMatter.inclusions;
-save(sprintf('./inclusions/%s_greyMatter_%dvol.mat',volume_name,vox_volume),'inclusions');
+file_name=sprintf('./inclusions/%s_greyMatter_%dvol.mat',volume_name,vox_volume);
+save(file_name,'inclusions');
 clear inclusions;
 %% To visualise, we require some bare-minima
 cfg.srcpos=[75 14 73]; %Source position
